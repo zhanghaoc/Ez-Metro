@@ -3,7 +3,7 @@
 vector<int> dijkstra(int start, int end)
 该函数取两个中转站的物理地址
 返回一个vector<int>
-vector[0]记录start到end的最短路径
+vector[0]记录start到end的最短时间，包括中转时间
 [1]-[back]依次是路径上结点物理编号如start,...,end
 特殊情况：
     start或end是-1，此时仅返回含一个元素：1000的vector即可
@@ -49,13 +49,16 @@ typedef struct station {
         lineAndTime = vector<pair<lineIndex, time>>{};
     }
 } station;
+//单例模式，没啥用，只是对全局变量的一个封装
+//特点是有一个getInstance()函数
+//构造函数是private的
 class Singleton {
 public:
-    ~Singleton();
+    ~Singleton() {delete instance;}
     static Singleton* getInstance();
     vector<int> findPath(string&, string&);
     void printPath(vector<int>&);
-    void test();//用来我自己瞎测试用
+    void test();//用来我自己瞎测试用,输出一些数据到data.txt
 private:
     static Singleton* instance;
     vector<vector<int>> allLines;
@@ -115,7 +118,7 @@ bool find(vector<int>& v, int n) {
 //站编号从1开始编号，线从0开始编号
 //站编号为0的表示未编号
 //data中的数据从1号线顺序排序
-//存在中转3条线的站
+//存在中转3条线的站，于是判断条件不要写 ==2，用 !=1
 Singleton::Singleton() {
     ifstream input("data.txt");
     if (!input.is_open()) return;
@@ -138,7 +141,6 @@ Singleton::Singleton() {
             station tempStation(name, currentNumber, 1);
             tempStation.lineAndTime.push_back(make_pair(index, currentTime));
             stations.push_back(tempStation);
-            //nameToIndex.insert(make_pair(name, currentNumber));
             nameToIndex[name] = currentNumber;
             allLines[index].push_back(currentNumber);
             currentNumber++; 
@@ -178,18 +180,17 @@ Singleton::Singleton() {
                             currentDistance = x.second;
                     if (flag) {
                         numPre = currentStation;
-                        dPre = abs(stations[realIndex].lineAndTime[0].second-
-                        currentDistance);
+                        dPre = abs(stations[realIndex].lineAndTime[0].second
+                        -currentDistance);
                     } 
                     else {
                         numNext = currentStation;
-                        dNext = abs(stations[realIndex].lineAndTime[0].second-
-                        currentDistance);
+                        dNext = abs(stations[realIndex].lineAndTime[0].second
+                        -currentDistance);
                         break;
                     }
                 } 
             }
-
             int k;
             for (k = 0; k < transfers.size(); k++)
                 if (transfers[k] == numPre)
@@ -213,8 +214,10 @@ bool Singleton::sameLine(int num1, int num2) {
     }
     return false;
 }
+//返回：通过引用传递，前一个中转站编号和到其距离，后一个中转站编号和到期距离
 void Singleton::getPreNext(int num, int& numPre, int& numNext, int& dPre, int& dNext) {
     numNext = numPre = -1;
+    //加入num本身就是中转站，前一个和后一个都视为本身
     if (stations[num].lineNumber != 1) {//lineNumber不为1的都是换乘站
         numPre = numNext = num;
         dPre = dNext = 0;
@@ -225,7 +228,7 @@ void Singleton::getPreNext(int num, int& numPre, int& numNext, int& dPre, int& d
             int currentStation = allLines[lineIndex][i];
             if (currentStation == num)
                 flag = 1;
-            if (stations[currentStation].lineNumber == 2) {
+            if (stations[currentStation].lineNumber != 1) {
                 int currentDistance;
                     for (auto x : stations[currentStation].lineAndTime)
                         if (x.first == lineIndex)
@@ -245,6 +248,7 @@ void Singleton::getPreNext(int num, int& numPre, int& numNext, int& dPre, int& d
         }
     }
 }
+//用来输出，不用管
 void Singleton::printPath(vector<int>& v) {
     cout << stations[v[0]].name << " -> ";
     for (int i = 1; i < v.size()-2; i++)
@@ -302,6 +306,8 @@ vector<int> Singleton::findPath(string& s1, string& s2) {
     temp.push_back(num2);
     return temp;
 }
+//单例模式，没啥用，只是对全局变量的一个封装
+
 Singleton* Singleton::getInstance() {
     if (instance == nullptr)
         instance = new Singleton();
