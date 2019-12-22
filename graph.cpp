@@ -1,3 +1,20 @@
+/* 注意事项
+现在还差dijkstra的算法，函数描述如下
+vector<int> dijkstra(int start, int end)
+该函数取两个中转站的物理地址
+返回一个vector<int>
+vector[0]记录start到end的最短路径
+[1]-[back]依次是路径上结点物理编号如start,...,end
+特殊情况：
+    start或end是-1，此时仅返回含一个元素：1000的vector即可
+关于graph的数据结构
+    每个中转站有一个物理地址与虚拟地址
+    物理地址是从所有站角度的编号，
+    虚拟地址是从仅从中转站的编号，
+    他们直接可以通过vector<int>transfer来转换
+    transfer下标是虚拟地址，对应值是物理地址
+
+*/
 #include <iostream>
 #include <fstream>
 #include <vector>
@@ -5,8 +22,11 @@
 #include <cmath>
 #define MAX_LENGTH 1000
 #define LINE_NUMBER 15
-#define int_max 2000000000
 using namespace std;
+//using std::cout//endl
+//using std::vector
+//using std::string
+
 //实际上我们不输出线的名字
 //data.txt里面
 //3.2->10
@@ -136,7 +156,7 @@ Singleton::Singleton() {
     input.close();
     //构建换乘站构成的图
     int n = transfers.size();
-    graph = vector<row>{n, row{n, int_max}};
+    graph = vector<row>{n, row{n, MAX_LENGTH}};
     for (int i = 0; i < n; i++) {
         int realIndex = transfers[i];
         //cout << "\n----zhengchang----" << i << endl;
