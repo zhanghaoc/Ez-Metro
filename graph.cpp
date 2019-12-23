@@ -131,22 +131,7 @@ Singleton::Singleton() {
         }
 
     }
-
-    string str = "增城广场";
-    cout << str << " ";
-    cout << nameToIndex[str] << endl;
-
-    for(map<string, int>::iterator iter = nameToIndex.begin();\
-        iter != nameToIndex.end(); iter++)
-        cout << iter->first << " " << iter->second << endl;
-    while(1)
-    {
-        string str;
-        cin >> str;
-        cout << str << endl;
-        cout << nameToIndex[str] << endl;
-    }
-
+    
     input.close();
     //构建换乘站构成的图
     int n = virtualToPhysical.size();
@@ -194,11 +179,12 @@ Singleton::Singleton() {
             if (numNext != 0) graph[i][k] = dNext;
         }
     }
+    
 }
 
 bool Singleton::sameLine(int num1, int num2) {
     for (int i = 0; i < stations[num1].lineNumber; i++) {
-        for (int j = 0; j < stations[num2].lineNumber; i++) {
+        for (int j = 0; j < stations[num2].lineNumber; j++) {
             if (stations[num1].lineAndTime[0].first 
             == stations[num2].lineAndTime[0].first)
                 return true;
@@ -224,7 +210,7 @@ void Singleton::getPreNext(int num, int& numPre, int& numNext, int& dPre, int& d
                 int currentDistance;
                     for (auto x : stations[currentStation].lineAndTime)
                         if (x.first == lineIndex)
-                            currentDistance = x.second;
+                            currentDistance = x.second;                        
                     if (flag) {
                         numPre = currentStation;
                         dPre = abs(stations[num].lineAndTime[0].second-
@@ -237,16 +223,20 @@ void Singleton::getPreNext(int num, int& numPre, int& numNext, int& dPre, int& d
                         break;
                     }
             } 
+            
         }
     }
 }
-
+void print(vector<int>& V)
+{
+    for(int i=0;i<V.size();i++)
+        cout << V[i] << " ";
+    cout << endl;
+}
 //计算时间最少路径
 vector<int> Singleton::findPath(string& s1, string& s2) {
     int num1 = nameToIndex[s1];
-    int num2 = nameToIndex[s2];
-
-    cout << num1 << " " << num2 << endl;
+    int num2 = nameToIndex[s2];    
 
     if (sameLine(num1, num2)) {
         vector<int> temp = {num1, num2};
@@ -254,19 +244,25 @@ vector<int> Singleton::findPath(string& s1, string& s2) {
     }
     int num1Pre, num2Pre, num1Next, num2Next;
     int num1PreD, num2PreD, num1NextD, num2NextD;
-    
+
     getPreNext(num1, num1Pre, num1Next, num1PreD, num1NextD);
     getPreNext(num2, num2Pre, num2Next, num2PreD, num2NextD);
+
     //vector第一位存距离
     //dijskstra时最好单独处理好num1Pre为-1的情况！！！
     //重要！！！此时vector请仅返回1000 (MAX_TIME)
     //这里的num1Pre, num2Next均是站的物理编号
     //进行dijkstra时要映射成虚拟编号进行操作
     //dijkstra内部要算上换乘时间！
+    cout << num1 << ' ' << num1Pre << ' ' << num1Next << ' ' << num2Pre << ' ' << num2Next << endl;
     vector<int> l1 = dijkstra(num1Pre, num2Pre);
+    print(l1);
     vector<int> l2 = dijkstra(num1Pre, num2Next);
+    print(l2);
     vector<int> l3 = dijkstra(num1Next, num2Pre);
+    print(l3);
     vector<int> l4 = dijkstra(num1Next, num2Next);
+    print(l4);
     vector<int> distances(4, 0);
     distances[0] = num1PreD + l1[0] + num2PreD;
     distances[1] = num1PreD + l2[0] + num2NextD;
