@@ -307,7 +307,6 @@ vector<int> Singleton::findPath(string& s1, string& s2) {
     return temp;
 }
 //单例模式，没啥用，只是对全局变量的一个封装
-
 Singleton* Singleton::getInstance() {
     if (instance == nullptr)
         instance = new Singleton();
