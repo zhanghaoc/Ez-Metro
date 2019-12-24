@@ -231,8 +231,8 @@ Singleton::Singleton() {
 bool Singleton::sameLine(int num1, int num2) {
     for (int i = 0; i < stations[num1].lineNumber; i++) {
         for (int j = 0; j < stations[num2].lineNumber; j++) {
-            if (stations[num1].lineAndTime[0].first 
-            == stations[num2].lineAndTime[0].first)
+            if (stations[num1].lineAndTime[i].first 
+            == stations[num2].lineAndTime[j].first)
                 return true;
         }
     }
@@ -241,6 +241,7 @@ bool Singleton::sameLine(int num1, int num2) {
 //通过传递引用计算编号为num的站的最近的两个中转站编号和到其距离（不妨一个称为前，一个称为后）
 void Singleton::getPreNext(int num, int& numPre, int& numNext, int& dPre, int& dNext) {
     numNext = numPre = -1;
+    dPre = dNext = 0;
     //若num本身就是中转站，则返回的两个中转站都是它自己，距离都为0
     if (stations[num].lineNumber != 1) {//lineNumber不为1的都是换乘站
         numPre = numNext = num;
@@ -302,7 +303,7 @@ vector<int> Singleton::findPath(string& s1, string& s2) {
 
     //vector第一位存距离
     //dijskstra时最好单独处理好num1Pre为-1的情况！！！
-    //重要！！！此时vector请仅返回1000 (MAX_TIME)
+    //重要！！！此时vector请仅返回900 (MAX_TIME)
     //这里的num1Pre, num2Next均是站的物理编号
     //进行dijkstra时要映射成虚拟编号进行操作
     //dijkstra内部要算上换乘时间！
@@ -326,6 +327,9 @@ vector<int> Singleton::findPath(string& s1, string& s2) {
     for (int i = 1; i < 4; i++)
         if (distances[min] > distances[i]) 
             min = i;
+    cout << endl;
+    for (auto x : distances)
+        cout << x << ' ';
     vector<int> temp;
     switch(min) {
         case 0:
@@ -341,6 +345,10 @@ vector<int> Singleton::findPath(string& s1, string& s2) {
             temp = l4;
             break;
     }
+    cout << endl;
+    for (auto x : temp)
+        cout << x << ' ';
+    cout << endl;
     auto iter = temp.begin();
     if (num1Next != num1Pre)
         temp[0] = num1;
@@ -370,7 +378,7 @@ vector<int> Singleton::dijkstra(int start, int end)
         if(virtualToPhysical[i] == end)
             destination = i;     
     }
-    
+
     enum {UNCOLLECTED, COLLECTED} state;
 
     vector<int> path(n, -1); //存放到该点最短路径的上一个顶点编号
@@ -378,9 +386,9 @@ vector<int> Singleton::dijkstra(int start, int end)
     vector<bool> status(n, UNCOLLECTED); //表示每个点的状态：已收集到S中和未收集到S中
 
     //初始化距离    
-    
+    dist[source] = 0;
     //dijkstra算法
-    for(int i=0, s=source;i<n;i++)
+    for(int i=0, s=source;i<n-1;i++)
     {        
         //将距离最小的点s收录到集合S中
         status[s] = COLLECTED;
@@ -389,15 +397,15 @@ vector<int> Singleton::dijkstra(int start, int end)
         for(int j=0;j<n;j++)    
             if(status[j] == UNCOLLECTED) //如果没有被收进来，则更新最短距离
             {
-                if(graph[s][j] < dist[j])
+                if(dist[s] + graph[s][j] < dist[j])
                 {
-                    dist[j] = graph[s][j];
+                    dist[j] = dist[s] + graph[s][j];
                     path[j] = s;
                 }                    
             }                
         
         //找到下一个距离最小且尚未收录的点
-        int minV, minDist = MAX_TIME;
+        int minV = 0, minDist = MAX_TIME;
         for(int j=0;j<n;j++)
             if(status[j] == UNCOLLECTED && dist[j] < minDist)
                 minV = j;
@@ -416,7 +424,11 @@ vector<int> Singleton::dijkstra(int start, int end)
     result.push_back(dist[destination]);
     for(int i=0;i<result.size()/2;i++)
         swap(result[i], result[result.size()-i-1]);
-
+    cout << "例子：" << start << ' ' << end << endl;
+    cout << "dist: ";
+    for (auto x : dist)
+        cout << x << ' ';
+    cout << endl;
     return result;
 }
 
