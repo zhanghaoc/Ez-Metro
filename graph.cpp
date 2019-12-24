@@ -21,7 +21,7 @@ vector[0]记录start到end的最短时间，包括中转时间
 #include <cmath>
 #define MAX_TIME 900 //定义最长时间，即任意简单路径的时间都不会超过该时间
 #define LINE_NUMBER 15
-#define TRANSFER_TIME 3 //由于换乘时间主要与不同线路之间的时间差和乘车时刻的发车频率有关，故取换乘时间的均值，约为三分钟
+#define TRANSFER_TIME 10 //由于换乘时间主要与不同线路之间的时间差和乘车时刻的发车频率有关，故取换乘时间的均值，约为三分钟
 using namespace std;
 
 //实际上我们不输出线的名字
@@ -73,6 +73,7 @@ private:
     map<string, int> nameToIndex; //站名到站编号的映射
     vector<int> dijkstra(int start, int end);   
     bool sameLine(int, int); //判断是否两个站在同一条线上
+    bool sameLineThree(int num1, int num2, int num3);//
     void getPreNext(int, int&, int&, int&, int&); //计算编号为num的站的最近的两个中转站编号和到其距离
 };
 
@@ -238,6 +239,19 @@ bool Singleton::sameLine(int num1, int num2) {
     }
     return false;
 }
+bool Singleton::sameLineThree(int num1, int num2, int num3) {
+    for (int i = 0; i < stations[num1].lineNumber; i++) {
+        for (int j = 0; j < stations[num2].lineNumber; j++) {
+            for (int k = 0; k < stations[num3].lineNumber; k++)
+            if (stations[num1].lineAndTime[i].first 
+            == stations[num2].lineAndTime[j].first && 
+            stations[num1].lineAndTime[i].first 
+            == stations[num3].lineAndTime[k].first)
+                return true;
+        }
+    }
+    return false;
+}
 //通过传递引用计算编号为num的站的最近的两个中转站编号和到其距离（不妨一个称为前，一个称为后）
 void Singleton::getPreNext(int num, int& numPre, int& numNext, int& dPre, int& dNext) {
     numNext = numPre = -1;
@@ -393,23 +407,35 @@ vector<int> Singleton::dijkstra(int start, int end)
         //将距离最小的点s收录到集合S中
         status[s] = COLLECTED;
 
-        //通过收录进来的点s更新其它尚未收录的点
-        for(int j=0;j<n;j++)    
-            if(status[j] == UNCOLLECTED) //如果没有被收进来，则更新最短距离
+       //通过收录进来的点s更新其它尚未收录的点
+        for(int j=0;j<n;j++) 
+        if(status[j] == UNCOLLECTED) //如果没有被收进来，则更新最短距离
+        {
+            if(dist[s] + graph[s][j] < dist[j])
             {
-                if(dist[s] + graph[s][j] < dist[j])
+                if(path[s] != -1 && !sameLine(path[s], j))
                 {
-                    dist[j] = dist[s] + graph[s][j];
-                    path[j] = s;
-                }                    
-            }                
+                    if(dist[s] + graph[s][j] + TRANSFER_TIME < dist[j])
+                    { 
+                        dist[j] = dist[s] + graph[s][j] + TRANSFER_TIME;
+                        path[j] = s;
+                    } 
+                }
+                else
+                {
+                dist[j] = dist[s] + graph[s][j];
+                path[j] = s;
+                }
+            } 
+        }                 
         
         //找到下一个距离最小且尚未收录的点
         int minV = 0, minDist = MAX_TIME;
         for(int j=0;j<n;j++)
-            if(status[j] == UNCOLLECTED && dist[j] < minDist)
+            if(status[j] == UNCOLLECTED && dist[j] < minDist) {
                 minV = j;
-        
+                minDist = dist[j];
+            }
         s = minV;
     }
     
@@ -439,7 +465,7 @@ void Singleton::printPath(vector<int>& v) {
     auto iter1 = iter+1;
     auto iter2 = iter1+1;
     while(iter2 != v.end()) {
-        if (sameLine(*iter, *iter2)) {
+        if (sameLineThree(*iter, *iter1, *iter2)) {
             iter1 = v.erase(iter1);
             iter2 = iter1 + 1;
         } else {
