@@ -224,8 +224,8 @@ Singleton::Singleton() {
             if (numNext != 0) graph[i][k] = dNext;
         }
     }
-    // for (int i = 0; i < n; i++)//自己到自己距离是1000
-    //     graph[i][i] = MAX_TIME;
+    for (int i = 0; i < n; i++)//自己到自己距离是0
+        graph[i][i] = 0;
 }
 
 bool Singleton::sameLine(int num1, int num2) {
@@ -269,7 +269,6 @@ void Singleton::getPreNext(int num, int& numPre, int& numNext, int& dPre, int& d
                     currentDistance);
                 }
             } 
-            
         }
     }
 }
@@ -342,8 +341,13 @@ vector<int> Singleton::findPath(string& s1, string& s2) {
             temp = l4;
             break;
     }
-    temp[0] = num1;
-    temp.push_back(num2);
+    auto iter = temp.begin();
+    if (num1Next != num1Pre)
+        temp[0] = num1;
+    else
+        temp.erase(iter);
+    if (num2Pre != num2Next)
+        temp.push_back(num2);
     return temp;
 }
 
@@ -364,9 +368,9 @@ vector<int> Singleton::dijkstra(int start, int end)
         if(virtualToPhysical[i] == start)
             source = i;
         if(virtualToPhysical[i] == end)
-            destination = i;        
+            destination = i;     
     }
-
+    
     enum {UNCOLLECTED, COLLECTED} state;
 
     vector<int> path(n, -1); //存放到该点最短路径的上一个顶点编号
@@ -382,21 +386,21 @@ vector<int> Singleton::dijkstra(int start, int end)
         status[s] = COLLECTED;
 
         //通过收录进来的点s更新其它尚未收录的点
-        for(int i=0;i<n;i++)    
-            if(status[i] == UNCOLLECTED) //如果没有被收进来，则更新最短距离
+        for(int j=0;j<n;j++)    
+            if(status[j] == UNCOLLECTED) //如果没有被收进来，则更新最短距离
             {
-                if(graph[s][i] < dist[i])
+                if(graph[s][j] < dist[j])
                 {
-                    dist[i] = graph[s][i];
-                    path[i] = s;
+                    dist[j] = graph[s][j];
+                    path[j] = s;
                 }                    
             }                
         
         //找到下一个距离最小且尚未收录的点
         int minV, minDist = MAX_TIME;
-        for(int i=0;i<n;i++)
-            if(status[i] == UNCOLLECTED && dist[i] < minDist)
-                minV = i;
+        for(int j=0;j<n;j++)
+            if(status[j] == UNCOLLECTED && dist[j] < minDist)
+                minV = j;
         
         s = minV;
     }
@@ -404,21 +408,34 @@ vector<int> Singleton::dijkstra(int start, int end)
     int vertex = destination;
     while(path[vertex] != -1) //依次将路径上的点从终点到起点一个个存进来
     {
-        result.push_back(vertex);
+        result.push_back(virtualToPhysical[vertex]);
         vertex = path[vertex];
     }
+    result.push_back(virtualToPhysical[vertex]);
 
     result.push_back(dist[destination]);
     for(int i=0;i<result.size()/2;i++)
-        swap(result[i], result[result.size()-i]);
+        swap(result[i], result[result.size()-i-1]);
+
     return result;
 }
 
 
 //输出路径
 void Singleton::printPath(vector<int>& v) {
+    auto iter = v.begin();
+    auto iter1 = iter+1;
+    auto iter2 = iter1+1;
+    while(iter2 != v.end()) {
+        if (sameLine(*iter, *iter2)) {
+            iter1 = v.erase(iter1);
+            iter2 = iter1 + 1;
+        } else {
+            iter++, iter1++, iter2++;
+        }
+    }
     cout << stations[v[0]].name << " -> ";
-    for (int i = 1; i < v.size()-2; i++)
+    for (int i = 1; i < v.size()-1; i++)
         cout << stations[v[i]].name << "\n↑换乘↓\n" 
         << stations[v[i]].name << " -> ";
     cout << stations[v.back()].name << endl;
