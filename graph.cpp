@@ -1,18 +1,10 @@
-/* 注意事项
-现在还差dijkstra的算法，函数描述如下
-vector<int> dijkstra(int start, int end)
-该函数取两个中转站的物理地址
-返回一个vector<int>
-vector[0]记录start到end的最短时间，包括中转时间
-[1]-[back]依次是路径上结点物理编号如start,...,end
-特殊情况：
-    start或end是-1，此时仅返回含一个元素：1000的vector即可
-关于graph的数据结构
+/*  
+    关于graph的数据结构
     每个中转站有一个物理地址与虚拟地址
     物理地址是从所有站角度的编号，
     虚拟地址是从仅从中转站的编号，
-    他们直接可以通过vector<int>transfer来转换
-    transfer下标是虚拟地址，对应值是物理地址
+    它们直接可以通过vector<int>virtualToPhysical来转换
+    virtualToPhysical下标是虚拟地址，对应值是物理地址
 */
 #include <iostream>
 #include <fstream>
@@ -20,12 +12,11 @@ vector[0]记录start到end的最短时间，包括中转时间
 #include <map>
 #include <cmath>
 #define MAX_TIME 900 //定义最长时间，即任意简单路径的时间都不会超过该时间
-#define LINE_NUMBER 15
-#define TRANSFER_TIME 10 //由于换乘时间主要与不同线路之间的时间差和乘车时刻的发车频率有关，故取换乘时间的均值，约为三分钟
+#define LINE_NUMBER 15 //总共有十五条线
+//由于换乘时间主要与不同线路之间的时间差和乘车时刻的发车频率有关
+//故取换乘时间的均值，约为三分钟
+#define TRANSFER_TIME 3
 using namespace std;
-
-//实际上我们不输出线的名字
-//data.txt里面
 
 //为了方便起见，本程序做了一些特殊线路的处理
 //三北线（三号线北延段）记为十号线
@@ -33,94 +24,6 @@ using namespace std;
 //广佛线记为十二号线
 //APM线不考虑
 //二十一号线记为十五号线
-typedef int lineIndex;
-typedef int Time;
-typedef vector<int> row;
-typedef vector<row> Graph;
-typedef int Vertex;
-typedef struct station {
-    string name; //站名
-    int index; //该站的编号，为了方便起见每个站都有自己的编号
-    int lineNumber; //穿过该站的线路数，为1时为普通站台，大于1时为中转站
-    vector<pair<lineIndex, Time> > lineAndTime; 
-    station(string s = "", int i = 0, int l = -1)
-    : name{s}, index{i}, lineNumber{l} {
-        lineAndTime = vector<pair<lineIndex, Time> >{};
-    }
-} station;
-
-//单例模式，没啥用，只是对全局变量的一个封装
-//特点是有一个getInstance()函数
-//构造函数是private的
-class Singleton {
-public:
-    ~Singleton() {delete instance;}
-    static Singleton* getInstance(); //获取实例
-    vector<int> findPath(string&, string&); //输入地铁站，输出
-    void printPath(vector<int>&); //打印线路
-    void test();
-private:
-    static Singleton* instance;
-    //构造函数
-    Singleton();
-
-    vector<vector<int>> allLines; //按顺序存储每一条线路上的站编号
-    //graph里一定要是0-40代表换乘站
-    vector<row> graph; 
-    //第0个元素无效
-    vector<station> stations; //存储所有站点    
-    vector<int> virtualToPhysical; //将虚拟地址映射到实际地址
-    map<string, int> nameToIndex; //站名到站编号的映射
-    vector<int> dijkstra(int start, int end);   
-    bool sameLine(int, int); //判断是否两个站在同一条线上
-    bool sameLineThree(int num1, int num2, int num3);//
-    void getPreNext(int, int&, int&, int&, int&); //计算编号为num的站的最近的两个中转站编号和到其距离
-};
-
-void Singleton::test() {
-    ofstream out("out.txt");
-    out << "\n-----allLines----" << endl;
-    for (auto x : allLines) {
-        for (auto y : x) {
-            out << y << ' ';
-        }
-        out << endl;
-    }
-    out << "\n------nameToIndex-----" << endl;
-    for (auto x : nameToIndex) {
-        out << x.first << "->" << x.second << endl;
-    }
-    out << "\n------graph-----" << endl;
-    int i = 0;
-    out << '\t';
-    for (int i = 0; i < graph.size(); i++)
-        out << i << '\t';
-    out << endl;
-    for (auto x : graph) {
-        out << i << "\t";
-        i++;
-        for (auto y : x) {
-            out << y << "\t";
-        }
-        out << endl;
-    }
-    out << "\n------virtualToPhysical-----" << endl;
-    for (int i = 0; i < virtualToPhysical.size(); i++) {
-        out << i << ' ' << stations[virtualToPhysical[i]].name << endl;
-    }
-    out << "\n------stations-----" << endl;
-    for (auto x : stations) {
-        out << x.name << ":" << x.index << endl;
-        for (auto y : x.lineAndTime) {
-            out << "line" << y.first+1 << "：" << y.second << endl;
-        }
-        out << "-------" << endl;
-    }
-    out.close();
-}
-
-
-Singleton* Singleton::instance = nullptr; //初始化为空指针
 
 bool find(vector<int>& v, int n){
     for (auto x : v)
@@ -128,16 +31,63 @@ bool find(vector<int>& v, int n){
             return true;
     return false;
 }
+
+typedef int lineIndex; //线编号
+typedef int Time; //时间单位：min
+typedef vector<int> line; //地铁线
+typedef vector<line> Graph; //多条地铁线组成图
+typedef int Vertex; //顶点类型
+typedef struct station {
+    string name; //站名
+    int index; //该站的编号，为了方便起见每个站都有自己的编号
+    int lineNumber; //穿过该站的线路数，为1时为普通站台，大于1时为中转站
+    vector<pair<lineIndex, Time> > lineAndTime; 
+    //存储穿过该站的线路和到线路终点站的时间
+    station(string s = "", int i = 0, int l = -1)
+    : name{s}, index{i}, lineNumber{l} {
+        lineAndTime = vector<pair<lineIndex, Time> >{};
+    }
+} station;
+
+//地铁类采用单例模式的设计思想，故命名为singleton
+class Singleton {
+public:
+    ~Singleton() {delete instance;}
+    static Singleton* getInstance(); //获取实例
+    vector<int> findPath(string&, string&); //输入地铁站，输出
+    void printPath(vector<int>&); //打印线路    
+
+private:
+    static Singleton* instance;    
+    Singleton();//构造函数，设置为private以保证只实例化一次
+
+    vector<vector<int>> allLines; //按顺序存储每一条线路上的站编号    
+    vector<line> graph; //存储中转站构成的图
+
+    vector<station> stations; //存储所有站点    
+    vector<int> virtualToPhysical; //将虚拟地址映射到实际地址
+    map<string, int> nameToIndex; //站名到站编号的映射
+    vector<int> dijkstra(int start, int end); //获取最快路径的函数，采用Dijkstra算法
+
+    bool sameLine(int, int); //判断是否两个站在同一条线上
+    bool sameLineThree(int, int, int);//判断三个站是否在同一线上
+
+    //计算编号为num的站的最近的两个中转站编号和到其距离
+    void getPreNext(int, int&, int&, int&, int&); 
+    
+};
+
+Singleton* Singleton::instance = nullptr; //初始化为空指针
+
+
 //读数据时每遇到一个换乘站，将其插入到vector第一个
 //数据记录格式，线编号，站名，到上一站时间，若为0，代表是起始站
 //站编号从1开始编号，线从0开始编号
 //站编号为0的表示未编号
-//data中的数据从1号线顺序排序
-//存在中转3条线的站，于是判断条件不要写 ==2，用 !=1
+
 Singleton::Singleton() {
     ifstream input("data.txt");
-    if (!input.is_open())            
-        //exit(0);        
+    if (!input.is_open())                  
         return; //打开失败则返回                   
 
     int currentTime, currentNumber = 1;
@@ -163,7 +113,8 @@ Singleton::Singleton() {
             nameToIndex[name] = currentNumber;
             allLines[index].push_back(currentNumber);
             currentNumber++; 
-        } else {//处理换乘站
+        } else {
+            //处理换乘站
             //需要在station资料中lineNumber+1,添加相关线与时间信息
             //还需要将换乘站加入到编号转换vector，便于构建图
             int stationIndex = nameToIndex[name];
@@ -179,10 +130,9 @@ Singleton::Singleton() {
 
     //构建换乘站构成的图
     int n = virtualToPhysical.size();
-    graph = vector<row>(n, row(n, MAX_TIME));
+    graph = vector<line>(n, line(n, MAX_TIME));
     for (int i = 0; i < n; i++) {
-        int realIndex = virtualToPhysical[i];
-        //cout << "\n----zhengchang----" << i << endl;
+        int realIndex = virtualToPhysical[i];        
         for (int j = 0; j < stations[realIndex].lineNumber; j++) {
             //由类似getprev的函数，计算出距离，若有，在矩阵相应位置赋值
             int lineIndex = stations[realIndex].lineAndTime[j].first;
@@ -225,7 +175,7 @@ Singleton::Singleton() {
             if (numNext != 0) graph[i][k] = dNext;
         }
     }
-    for (int i = 0; i < n; i++)//自己到自己距离是0
+    for (int i = 0; i < n; i++)//对角线赋值为0
         graph[i][i] = 0;
 }
 
@@ -239,6 +189,7 @@ bool Singleton::sameLine(int num1, int num2) {
     }
     return false;
 }
+
 bool Singleton::sameLineThree(int num1, int num2, int num3) {
     for (int i = 0; i < stations[num1].lineNumber; i++) {
         for (int j = 0; j < stations[num2].lineNumber; j++) {
@@ -252,6 +203,7 @@ bool Singleton::sameLineThree(int num1, int num2, int num3) {
     }
     return false;
 }
+
 //通过传递引用计算编号为num的站的最近的两个中转站编号和到其距离（不妨一个称为前，一个称为后）
 void Singleton::getPreNext(int num, int& numPre, int& numNext, int& dPre, int& dNext) {
     numNext = numPre = -1;
@@ -287,20 +239,11 @@ void Singleton::getPreNext(int num, int& numPre, int& numNext, int& dPre, int& d
         }
     }
 }
-void print(vector<int>& V)
-{
-    for(int i=0;i<V.size();i++)
-        cout << V[i] << " ";
-    cout << endl;
-}
-//计算时间最少路径
+
 vector<int> Singleton::findPath(string& s1, string& s2) {
-    cout << s1 << " " << s2 << endl;
 
     int num1 = nameToIndex[s1];
     int num2 = nameToIndex[s2];    
-
-    cout << num1 << " " << num2 << endl;
 
     if (num1*num2 == 0)
         return vector<int>{MAX_TIME};
@@ -315,63 +258,54 @@ vector<int> Singleton::findPath(string& s1, string& s2) {
     getPreNext(num1, num1Pre, num1Next, num1PreD, num1NextD);
     getPreNext(num2, num2Pre, num2Next, num2PreD, num2NextD);
 
-    //vector第一位存距离
-    //dijskstra时最好单独处理好num1Pre为-1的情况！！！
-    //重要！！！此时vector请仅返回900 (MAX_TIME)
-    //这里的num1Pre, num2Next均是站的物理编号
-    //进行dijkstra时要映射成虚拟编号进行操作
-    //dijkstra内部要算上换乘时间！
-    cout << "-----------numPreNext家族!---------" << endl;
-    cout << num1 << ' ' << num1Pre << ' ' << num1Next << ' ' << 
-    num2 << ' ' << num2Pre << ' ' << num2Next << endl;
     vector<int> l1 = dijkstra(num1Pre, num2Pre);
-    print(l1);
     vector<int> l2 = dijkstra(num1Pre, num2Next);
-    print(l2);
     vector<int> l3 = dijkstra(num1Next, num2Pre);
-    print(l3);
     vector<int> l4 = dijkstra(num1Next, num2Next);
-    print(l4);
+
     vector<int> distances(4, 0);
     distances[0] = num1PreD + l1[0] + num2PreD;
     distances[1] = num1PreD + l2[0] + num2NextD;
     distances[2] = num1NextD + l3[0] + num2PreD;
     distances[3] = num1NextD + l4[0] + num2NextD;
-    int min = 0;
+    int minPathIndex = 0;
     for (int i = 1; i < 4; i++)
-        if (distances[min] > distances[i]) 
-            min = i;
-    cout << endl;
-    for (auto x : distances)
-        cout << x << ' ';
-    vector<int> temp;
-    switch(min) {
+        if (distances[minPathIndex] > distances[i]) 
+            minPathIndex = i;
+
+    vector<int> minPath;
+    switch(minPathIndex) {
         case 0:
-            temp = l1;
+            minPath = l1;
             break;
         case 1:
-            temp = l2;
+            minPath = l2;
             break;
         case 2:
-            temp = l3;
+            minPath = l3;
             break;
         case 3:
-            temp = l4;
+            minPath = l4;
             break;
     }
-    cout << endl;
-    for (auto x : temp)
-        cout << x << ' ';
-    cout << endl;
-    auto iter = temp.begin();
+
+    auto iter = minPath.begin();
     if (num1Next != num1Pre)
-        temp[0] = num1;
+        minPath[0] = num1;
     else
-        temp.erase(iter);
+        minPath.erase(iter);
     if (num2Pre != num2Next)
-        temp.push_back(num2);
-    return temp;
+        minPath.push_back(num2);
+    return minPath;
 }
+
+/*vector<int> dijkstra(int start, int end)
+该函数取两个中转站的物理地址
+返回一个vector<int>
+vector[0]记录start到end的最短时间，包括中转时间
+[1]-[back]依次是路径上结点物理编号如start,...,end
+特殊情况：
+    start或end是-1，此时仅返回含一个元素MAX_TIME的vector即可*/
 
 vector<int> Singleton::dijkstra(int start, int end)
 {
@@ -413,18 +347,18 @@ vector<int> Singleton::dijkstra(int start, int end)
         {
             if(dist[s] + graph[s][j] < dist[j])
             {
-                if(path[s] != -1 && !sameLine(path[s], j))
+                if(path[s] != -1 && !sameLine(path[s], j)) //如果从s到j需要换乘
                 {
-                    if(dist[s] + graph[s][j] + TRANSFER_TIME < dist[j])
+                    if(dist[s] + graph[s][j] + TRANSFER_TIME < dist[j]) //则需考虑上换乘时间
                     { 
                         dist[j] = dist[s] + graph[s][j] + TRANSFER_TIME;
                         path[j] = s;
                     } 
                 }
-                else
+                else //不需换乘则按普通情形处理即可
                 {
-                dist[j] = dist[s] + graph[s][j];
-                path[j] = s;
+                    dist[j] = dist[s] + graph[s][j];
+                    path[j] = s;
                 }
             } 
         }                 
@@ -450,11 +384,6 @@ vector<int> Singleton::dijkstra(int start, int end)
     result.push_back(dist[destination]);
     for(int i=0;i<result.size()/2;i++)
         swap(result[i], result[result.size()-i-1]);
-    cout << "例子：" << start << ' ' << end << endl;
-    cout << "dist: ";
-    for (auto x : dist)
-        cout << x << ' ';
-    cout << endl;
     return result;
 }
 
@@ -472,15 +401,15 @@ void Singleton::printPath(vector<int>& v) {
             iter++, iter1++, iter2++;
         }
     }
+    cout << "-----------------------" << endl;   
     cout << stations[v[0]].name << " -> ";
     for (int i = 1; i < v.size()-1; i++)
         cout << stations[v[i]].name << "\n↑换乘↓\n" 
         << stations[v[i]].name << " -> ";
     cout << stations[v.back()].name << endl;
+    cout << "-----------------------" << endl;   
 }
 
-
-//单例模式，没啥用，只是对全局变量的一个封装
 Singleton* Singleton::getInstance() {
     if (instance == nullptr)
         instance = new Singleton();
